@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  destination:
+    namespace: vault
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://helm.releases.hashicorp.com
+    targetRevision: 0.31.0
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+      - .webhooks[]?.clientConfig.caBundle
+  sources:
+    - repoURL: https://github.com/dima032/home-lab-compleate
+      targetRevision: ''
+      ref: values
+    - repoURL: https://helm.releases.hashicorp.com
+      chart: vault
+      targetRevision: 0.31.0
+      type: helm
+      helm:
+        valueFiles:
+          - $values/apps/vault/values-override.yaml
+  project: vault
