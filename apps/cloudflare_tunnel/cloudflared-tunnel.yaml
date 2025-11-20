@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflare-tunnel
+  namespace: cloudflare-tunnel
+  labels:
+    app: cloudflare-tunnel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflare-tunnel
+  template:
+    metadata:
+      labels:
+        app: cloudflare-tunnel
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "cloudflare-tunnel-role"
+        
+        # 1. TRANSFORM the token into a valid credentials.json
+        vault.hashicorp.com/agent-inject-secret-credentials.json: "cloudflare/data/token"
+        vault.hashicorp.com/agent-inject-template-credentials.json: |
+          {{- with secret "cloudflare/data/token" -}}
+          {{- $data := .Data.data.token | base64Decode | parseJSON -}}
+          {
+            "AccountTag": "{{ $data.a }}",
+            "TunnelID": "{{ $data.t }}",
+            "TunnelSecret": "{{ $data.s }}"
+          }
+          {{- end }}
+
+        # 2. Create config.yml (Tunnel ID is 't' in the token)
+        vault.hashicorp.com/agent-inject-secret-config.yml: "cloudflare/data/token"
+        vault.hashicorp.com/agent-inject-template-config.yml: |
+          {{- with secret "cloudflare/data/token" -}}
+          {{- $data := .Data.data.token | base64Decode | parseJSON -}}
+          tunnel: {{ $data.t }}
+          credentials-file: /vault/secrets/credentials.json
+          ingress:
+            - service: http_status:404
+          {{- end }}
+          
+    spec:
+      serviceAccountName: cloudflare-tunnel-sa
+      containers:
+        - name: cloudflare-tunnel
+          image: cloudflare/cloudflared:latest
+          imagePullPolicy: Always
+          args:
+            - "--no-autoupdate"
+            - "--config"
+            - "/vault/secrets/config.yml"
+            - "tunnel"
+            - "run"
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
