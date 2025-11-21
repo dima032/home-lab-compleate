@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video2gif-bot
+  namespace: bots
+  labels:
+    app: video2gif-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: video2gif-bot
+  template:
+    metadata:
+      labels:
+        app: video2gif-bot
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "vid2gif-bot-role"
+        vault.hashicorp.com/agent-inject-secret-botsecrets: "kv/vid2gif-bot/data/secrets"
+        vault.hashicorp.com/agent-inject-template-botsecrets: |
+          {{- with secret "kv/vid2gif-bot/data/secrets" -}}
+          export VIDEO2GIF_BOT_TOKEN="{{ .Data.data.token }}"
+          {{- end }}
+    spec:
+      serviceAccountName: video2gif-bot-sa
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: video2gif-bot
+          image: dima032398485/vid2gif_bot:latest
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              . /vault/secrets/botsecrets && python main.py
+          env:
+            - name: VIDEO2GIF_MAX_GIF_SIZE_MB
+              value: "3"
+            - name: MAGICK_THREAD_LIMIT
+              value: "1"
+            - name: OMP_NUM_THREADS
+              value: "1"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          volumeMounts:
+            - name: temp-storage
+              mountPath: /tmp
+      volumes:
+        - name: temp-storage
+          emptyDir:
+            sizeLimit: "2Gi"
