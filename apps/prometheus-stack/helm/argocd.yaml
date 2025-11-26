@@ -1,0 +1,25 @@
+project: default
+source:
+  repoURL: https://github.com/dima032/home-lab-complete
+  path: apps/prometheus-stack/helm/values-override.yaml
+  targetRevision: HEAD
+destination:
+  server: https://kubernetes.default.svc
+  namespace: monitoring
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+sources:
+  - repoURL: https://github.com/dima032/home-lab-complete
+    targetRevision: HEAD
+    ref: values-repo
+  - repoURL: https://prometheus-community.github.io/helm-charts
+    targetRevision: 66.3.0
+    helm:
+      valueFiles:
+        - $values-repo/apps/prometheus-stack/helm/values-override.yaml
+    chart: kube-prometheus-stack
