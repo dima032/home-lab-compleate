@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: meme-storage-ingress
+  name: meme-storage-ocr-ingress
   namespace: bots
   annotations:
       kubernetes.io/ingress.class: traefik
@@ -11,15 +11,15 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-      - memes.mostreliable.bid
+      - memes-ocr.mostreliable.bid
   rules:
-    - host: memes.mostreliable.bid
+    - host: memes-ocr.mostreliable.bid
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: meme-storage-service
+                name: meme-storage-ocr-service
                 port:
                   number: 80

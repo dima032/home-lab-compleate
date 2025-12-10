@@ -1,41 +1,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: meme-storage-deployment
+  name: meme-storage-deployment-ocr
   namespace: bots
   labels:
-    app: meme-storage-bot
+    app: meme-storage-bot-ocr
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: meme-storage-bot
+      app: meme-storage-bot-ocr
   template:
     metadata:
       labels:
-        app: meme-storage-bot
+        app: meme-storage-bot-ocr
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/agent-pre-populate-only: "true"
-        vault.hashicorp.com/role: "meme-storage-bot-role"
-        vault.hashicorp.com/agent-inject-secret-botsecrets: "kv/meme-storage-bot/data/secret"
+        vault.hashicorp.com/role: "meme-storage-bot-ocr-role"
+        vault.hashicorp.com/agent-inject-secret-botsecrets: "kv/meme-storage-bot-ocr/data/secret"
         vault.hashicorp.com/agent-inject-template-botsecrets: |
-          {{- with secret "kv/meme-storage-bot/data/secret" -}}
+          {{- with secret "kv/meme-storage-bot-ocr/data/secret" -}}
           export TELEGRAM_TOKEN="{{ .Data.data.TELEGRAM_TOKEN }}"
           export ALLOWED_TELEGRAM_IDS="{{ .Data.data.ALLOWED_TELEGRAM_IDS }}"
           export PUBLIC_URL="{{ .Data.data.PUBLIC_URL }}"
           export URL_SIGNING_SECRET="{{ .Data.data.URL_SIGNING_SECRET }}"
+          export HUGGING_FACE_TOKEN="{{ .Data.data.HUGGING_FACE_TOKEN }}"
           {{- end }}
     spec:
-      serviceAccountName: meme-storage-sa
+      serviceAccountName: meme-storage-ocr-sa
       securityContext:
         fsGroup: 1000
         runAsUser: 1000
         runAsGroup: 1000
       volumes:
-        - name: meme-storage-data
+        - name: meme-storage-ocr-data
           persistentVolumeClaim:
-            claimName: meme-storage-pvc
+            claimName: meme-storage-ocr-pvc
       initContainers:
         - name: fix-permissions
           image: busybox
@@ -43,7 +44,7 @@ spec:
           securityContext:
             runAsUser: 0
           volumeMounts:
-            - name: meme-storage-data
+            - name: meme-storage-ocr-data
               mountPath: /app
         - name: make-dirs
           image: busybox
@@ -51,11 +52,11 @@ spec:
           securityContext:
             runAsUser: 0
           volumeMounts:
-            - name: meme-storage-data
+            - name: meme-storage-ocr-data
               mountPath: /app/data
       containers:
         - name: meme-storage-bot
-          image: dima032398485/meme-storage-bot:latest
+          image: dima032398485/meme-storage-bot:feature-ocr
           imagePullPolicy: Always
           workingDir: /app
           command: ["/bin/sh", "-c"]
@@ -69,11 +70,11 @@ spec:
               value: /app
           resources:
             requests:
-              cpu: "256m"
-              memory: "256Mi"
+              cpu: "1024m"
+              memory: "2048Mi"
             limits:
-              cpu: "512m"
-              memory: "512Mi"
+              cpu: "6144m"
+              memory: "10240Mi"
           volumeMounts:
-            - name: meme-storage-data
+            - name: meme-storage-ocr-data
               mountPath: /app/data

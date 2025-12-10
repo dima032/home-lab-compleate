@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: meme-storage-pvc
+  name: meme-storage-ocr-pvc
   namespace: bots
 spec:
   accessModes:
